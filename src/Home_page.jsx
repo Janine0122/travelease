@@ -15,10 +15,10 @@ function weather_text(code) {
   return 'Thunderstorm'
 }
 
-// gets data from an API, returns null if it fails
+// gets data from an API, returns null if it fails or takes too long
 async function get_json(url) {
   try {
-    const response = await fetch(url)
+    const response = await fetch(url, { signal: AbortSignal.timeout(6000) })
     if (!response.ok) return null
     return await response.json()
   } catch {
@@ -41,6 +41,20 @@ async function get_wiki(title) {
     extract: page.extract,
     image: page.thumbnail ? page.thumbnail.source : null,
   }
+}
+
+// gets earthquakes (magnitude 4+) within 300 km in the past year
+async function get_earthquakes(lat, lon) {
+  const one_year_ago = new Date(Date.now() - 365 * 24 * 60 * 60 * 1000)
+    .toISOString()
+    .slice(0, 10)
+
+  const data = await get_json(
+    `https://earthquake.usgs.gov/fdsnws/event/1/query?format=geojson&latitude=${lat}&longitude=${lon}&maxradiuskm=300&minmagnitude=4&starttime=${one_year_ago}&orderby=time&limit=5`
+  )
+
+  if (!data) return null
+  return data.features
 }
 
 const HOME_CURRENCY = 'PHP'
@@ -76,16 +90,18 @@ function Home_page({ profile }) {
 
     // API 2: Open-Meteo (weather)
     // API 3: countries.dev (country info)
-    // API 4: Wikipedia (description and photo)
-    const [weather, country, wiki] = await Promise.all([
+    // API 4 (bonus): Wikipedia (description and photo)
+    // API 5: USGS (earthquakes)
+    const [weather, country, wiki, quakes] = await Promise.all([
       get_json(
         `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m,weather_code,wind_speed_10m&daily=weather_code,temperature_2m_max,temperature_2m_min&timezone=auto&forecast_days=5`
       ),
       get_json(`https://countries.dev/alpha/${country_code}`),
       get_wiki(place_name),
+      get_earthquakes(lat, lon),
     ])
 
-    // API 5: Frankfurter (exchange rate from PHP to the local currency)
+    // API 6: Frankfurter (exchange rate from PHP to the local currency)
     let currency_code = null
     let rate = null
 
@@ -112,6 +128,7 @@ function Home_page({ profile }) {
       weather: weather,
       country: country,
       wiki: wiki,
+      quakes: quakes,
       currency_code: currency_code,
       rate: rate,
     })
@@ -205,6 +222,22 @@ function Home_page({ profile }) {
             ) : (
               <p>Exchange rate not available for this country.</p>
             )}
+          </div>
+
+          <div className="card">
+            <h3>Recent Earthquakes</h3>
+            <p className="small_text">Magnitude 4+ within 300 km, past year</p>
+            {result.quakes === null && <p>Earthquake data not available.</p>}
+            {result.quakes && result.quakes.length === 0 && (
+              <p>No earthquakes found nearby.</p>
+            )}
+            {result.quakes &&
+              result.quakes.map((quake) => (
+                <p key={quake.id}>
+                  {new Date(quake.properties.time).toLocaleDateString()}: M
+                  {quake.properties.mag} - {quake.properties.place}
+                </p>
+              ))}
           </div>
 
           <div className="card">
