@@ -2,6 +2,8 @@ import { useState } from 'react'
 import Place_map from './Place_map'
 import Save_trip_button from './Save_trip_button'
 
+const QUICK_PLACES = ['Tokyo', 'Paris', 'Bohol', 'Singapore', 'Seoul']
+
 // turns the weather code into words
 function weather_text(code) {
   if (code === 0) return 'Clear sky'
@@ -65,15 +67,26 @@ function Home_page({ profile }) {
   const [message, setMessage] = useState('')
   const [result, setResult] = useState(null)
 
-  async function handle_search(e) {
+  // when the search form is submitted
+  function handle_search(e) {
     e.preventDefault()
+    run_search(query)
+  }
+
+  // when a quick button is clicked
+  function handle_quick(place_name) {
+    setQuery(place_name)
+    run_search(place_name)
+  }
+
+  async function run_search(search_text) {
     setMessage('')
     setResult(null)
     setLoading(true)
 
     // API 1: OpenStreetMap Nominatim (find the place)
     const places = await get_json(
-      `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(query)}&format=json&limit=1&addressdetails=1`
+      `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(search_text)}&format=json&limit=1&addressdetails=1`
     )
 
     if (!places || places.length === 0) {
@@ -86,7 +99,7 @@ function Home_page({ profile }) {
     const lat = parseFloat(place.lat)
     const lon = parseFloat(place.lon)
     const country_code = place.address.country_code
-    const place_name = place.name || query
+    const place_name = place.name || search_text
 
     // API 2: Open-Meteo (weather)
     // API 3: countries.dev (country info)
@@ -151,8 +164,37 @@ function Home_page({ profile }) {
         <button type="submit">Search</button>
       </form>
 
-      {loading && <p>Searching...</p>}
+      <div className="quick_row">
+        <span className="small_text">Try:</span>
+        {QUICK_PLACES.map((name) => (
+          <button
+            type="button"
+            className="quick_btn"
+            key={name}
+            onClick={() => handle_quick(name)}
+          >
+            {name}
+          </button>
+        ))}
+      </div>
+
+      {loading && <p className="loading">Searching...</p>}
       {message && <p className="error_text">{message}</p>}
+
+      {!result && !loading && !message && (
+        <div className="empty_state">
+          <h3>Plan your next trip with TripMate</h3>
+          <p>Search any place and get everything you need in one page:</p>
+          <div className="feature_row">
+            <span className="feature_tag">Weather forecast</span>
+            <span className="feature_tag">Country info</span>
+            <span className="feature_tag">Exchange rate</span>
+            <span className="feature_tag">Earthquake alerts</span>
+            <span className="feature_tag">Map</span>
+          </div>
+          <p>Then save the place to My Trips and add your dates and notes.</p>
+        </div>
+      )}
 
       {result && (
         <div className="results">

@@ -368,3 +368,65 @@ th {
 tbody tr:hover {
   background: #fafbff;
 }
+
+/* ---------- quick buttons ---------- */
+.quick_row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 24px;
+}
+
+.quick_btn {
+  padding: 7px 18px;
+  background: white;
+  color: #6a5cf0;
+  border: 1px solid #d9d4fb;
+  border-radius: 20px;
+  font-family: inherit;
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.quick_btn:hover {
+  background: #6a5cf0;
+  color: white;
+}
+
+/* ---------- welcome box ---------- */
+.empty_state {
+  background: white;
+  padding: 36px;
+  border-radius: 18px;
+  text-align: center;
+  box-shadow: 0 6px 18px rgba(70, 80, 160, 0.12);
+}
+
+.empty_state h3 {
+  font-size: 22px;
+  color: #1e6fd9;
+  margin-bottom: 10px;
+}
+
+.empty_state p {
+  color: #5b6b8c;
+  margin-bottom: 14px;
+}
+
+.feature_row {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 10px;
+  margin-bottom: 16px;
+}
+
+.feature_tag {
+  background: #eef0ff;
+  color: #4b3fd1;
+  padding: 7px 16px;
+  border-radius: 20px;
+  font-size: 14px;
+  font-weight: 500;
+}
