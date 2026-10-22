@@ -213,3 +213,44 @@ body {
   border-radius: 6px;
   margin-top: 4px;
 }
+
+.stats {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 16px;
+  margin: 20px 0;
+}
+
+.stat_box {
+  background: #1e6fd9;
+  color: white;
+  padding: 20px;
+  border-radius: 10px;
+  text-align: center;
+}
+
+.stat_box h3 {
+  font-size: 32px;
+}
+
+.dash_section {
+  margin-bottom: 20px;
+  overflow-x: auto;
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 14px;
+}
+
+th,
+td {
+  text-align: left;
+  padding: 10px;
+  border-bottom: 1px solid #e3e3e3;
+}
+
+th {
+  background: #f4f7fb;
+}
