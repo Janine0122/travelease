@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import Place_map from './Place_map'
+import Save_trip_button from './Save_trip_button'
 
 // turns the weather code into words
 function weather_text(code) {
@@ -132,6 +133,10 @@ function Home_page({ profile }) {
               <img className="place_photo" src={result.wiki.thumbnail.source} alt={result.name} />
             )}
             <p>{result.wiki ? result.wiki.extract : 'No description found.'}</p>
+            <Save_trip_button
+                place={result.name}
+                country={result.country ? result.country.name.common : ''}
+            />
           </div>
 
           <div className="card">

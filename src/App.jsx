@@ -1,12 +1,13 @@
 import { useState, useEffect } from 'react'
 import { Routes, Route, Navigate } from 'react-router-dom'
 import { supabase } from './supabase_client'
-import Navbar from './Navbar'
+import Navbar from './Navbar.jsx'
 import Login_form from './Login_form'
 import Register_form from './Register_form'
 import Home_page from './Home_page'
 import Admin_page from './Admin_page'
 import './App.css'
+import My_trips from './My_trips'
 
 function App() {
   const [session, setSession] = useState(undefined)
@@ -59,6 +60,10 @@ function App() {
         <Route
           path="/register"
           element={!session ? <Register_form /> : <Navigate to="/" />}
+        />
+        <Route
+          path="/trips"
+          element={session ? <My_trips user_id={session.user.id} /> : <Navigate to="/login" />}
         />
         <Route
           path="/admin"

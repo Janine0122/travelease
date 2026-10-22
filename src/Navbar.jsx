@@ -13,6 +13,7 @@ function Navbar({ session, role }) {
         {session ? (
           <>
             <Link to="/">Home</Link>
+            <Link to="/trips">My Trips</Link>
             {role === 'admin' && <Link to="/admin">Dashboard</Link>}
             <button onClick={handle_logout}>Logout</button>
           </>

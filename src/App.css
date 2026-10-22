@@ -164,3 +164,52 @@ body {
   width: 100%;
   border-radius: 8px;
 }
+
+.save_btn {
+  padding: 8px 16px;
+  background: #1e6fd9;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  margin-top: 6px;
+}
+
+.success_text {
+  color: green;
+  margin-top: 8px;
+}
+
+.trip_buttons {
+  display: flex;
+  gap: 10px;
+  margin-top: 10px;
+}
+
+.trip_buttons button {
+  padding: 6px 14px;
+  background: #1e6fd9;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.trip_buttons .delete_btn {
+  background: #d93030;
+}
+
+.edit_form label {
+  display: block;
+  font-size: 14px;
+  margin-top: 8px;
+}
+
+.edit_form input,
+.edit_form textarea {
+  width: 100%;
+  padding: 8px;
+  border: 1px solid #ccc;
+  border-radius: 6px;
+  margin-top: 4px;
+}
