@@ -4,6 +4,12 @@ import Save_trip_button from './Save_trip_button'
 
 const QUICK_PLACES = ['Tokyo', 'Paris', 'Bohol', 'Singapore', 'Seoul']
 
+// public Overpass servers (the second one is a backup)
+const OVERPASS_SERVERS = [
+  'https://overpass-api.de/api/interpreter',
+  'https://overpass.kumi.systems/api/interpreter',
+]
+
 // turns the weather code into words
 function weather_text(code) {
   if (code === 0) return 'Clear sky'
@@ -59,14 +65,16 @@ async function get_earthquakes(lat, lon) {
   return data.features
 }
 
-// gets places to visit within 15 km (OpenStreetMap Overpass API)
+// gets places to visit within 10 km (OpenStreetMap Overpass API)
 async function get_attractions(lat, lon) {
-  const overpass_query = `[out:json][timeout:15];nwr["tourism"~"attraction|museum|viewpoint|zoo|theme_park"]["name"](around:15000,${lat},${lon});out center 80;`
+  const overpass_query = `[out:json][timeout:25];nwr["tourism"~"attraction|museum|viewpoint|zoo|theme_park"]["name"](around:10000,${lat},${lon});out center 60;`
 
-  const data = await get_json(
-    `https://overpass-api.de/api/interpreter?data=${encodeURIComponent(overpass_query)}`,
-    15000
-  )
+  // try each server until one answers
+  let data = null
+  for (const server of OVERPASS_SERVERS) {
+    data = await get_json(`${server}?data=${encodeURIComponent(overpass_query)}`, 20000)
+    if (data) break
+  }
 
   if (!data) return null
 
@@ -290,7 +298,7 @@ function Home_page({ profile }) {
 
           <div className="card">
             <h3>Places to Visit</h3>
-            <p className="small_text">Popular spots within 15 km (well-known places first)</p>
+            <p className="small_text">Popular spots within 10 km (well-known places first)</p>
             {places_loading && <p>Looking for places...</p>}
             {!places_loading && places === null && (
               <p>Places not available right now. Try searching again later.</p>
