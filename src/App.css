@@ -430,3 +430,37 @@ tbody tr:hover {
   font-size: 14px;
   font-weight: 500;
 }
+
+/* ---------- admin actions ---------- */
+.badge {
+  background: #eef0ff;
+  color: #4b3fd1;
+  padding: 3px 12px;
+  border-radius: 20px;
+  font-size: 13px;
+  font-weight: 500;
+}
+
+.badge_admin {
+  background: #6a5cf0;
+  color: white;
+}
+
+.table_btn {
+  padding: 6px 14px;
+  background: #1e6fd9;
+  color: white;
+  border: none;
+  border-radius: 20px;
+  font-family: inherit;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.table_btn:hover {
+  opacity: 0.9;
+}
+
+.table_btn.danger {
+  background: #d93030;
+}

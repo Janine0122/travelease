@@ -1,32 +1,79 @@
 import { useState, useEffect } from 'react'
 import { supabase } from './supabase_client'
 
-function Admin_page() {
+function Admin_page({ user_id }) {
   const [users, setUsers] = useState([])
   const [trips, setTrips] = useState([])
   const [loading, setLoading] = useState(true)
   const [message, setMessage] = useState('')
 
-  useEffect(() => {
-    async function load_data() {
-      const users_result = await supabase
-        .from('profiles')
-        .select('*')
-        .order('created_at', { ascending: false })
+  async function load_data() {
+    const users_result = await supabase
+      .from('profiles')
+      .select('*')
+      .order('created_at', { ascending: false })
 
-      const trips_result = await supabase.from('trips').select('*')
+    const trips_result = await supabase
+      .from('trips')
+      .select('*')
+      .order('created_at', { ascending: false })
 
-      if (users_result.error || trips_result.error) {
-        setMessage('Could not load the dashboard data.')
-      } else {
-        setUsers(users_result.data)
-        setTrips(trips_result.data)
-      }
-      setLoading(false)
+    if (users_result.error || trips_result.error) {
+      setMessage('Could not load the dashboard data.')
+    } else {
+      setUsers(users_result.data)
+      setTrips(trips_result.data)
     }
+    setLoading(false)
+  }
 
+  useEffect(() => {
     load_data()
   }, [])
+
+  // change a user's role
+  async function change_role(user, new_role) {
+    const sure = window.confirm(`Make ${user.full_name} a ${new_role}?`)
+    if (!sure) return
+
+    setMessage('')
+
+    const { data, error } = await supabase
+      .from('profiles')
+      .update({ role: new_role })
+      .eq('id', user.id)
+      .select()
+
+    if (error) {
+      setMessage(error.message)
+    } else if (data.length === 0) {
+      setMessage('Not allowed. Did you run the SQL in Supabase?')
+    } else {
+      load_data()
+    }
+  }
+
+  // remove any user's trip
+  async function delete_trip(trip) {
+    const sure = window.confirm(`Delete the trip "${trip.place}"?`)
+    if (!sure) return
+
+    setMessage('')
+
+    const { data, error } = await supabase
+      .from('trips')
+      .delete()
+      .eq('id', trip.id)
+      .select()
+
+    if (error) {
+      setMessage(error.message)
+    } else if (data.length === 0) {
+      setMessage('Not allowed. Did you run the SQL in Supabase?')
+    } else {
+      load_data()
+    }
+  }
 
   if (loading) {
     return <p className="loading">Loading...</p>
@@ -42,9 +89,13 @@ function Admin_page() {
     .sort((a, b) => b[1] - a[1])
     .slice(0, 5)
 
-  // count trips per user
-  function trips_of(user_id) {
-    return trips.filter((trip) => trip.user_id === user_id).length
+  function trips_of(id) {
+    return trips.filter((trip) => trip.user_id === id).length
+  }
+
+  function owner_name(id) {
+    const owner = users.find((user) => user.id === id)
+    return owner ? owner.full_name : 'Unknown'
   }
 
   const admin_count = users.filter((user) => user.role === 'admin').length
@@ -94,7 +145,7 @@ function Admin_page() {
       </div>
 
       <div className="card dash_section">
-        <h3>All users</h3>
+        <h3>Manage users</h3>
         <table>
           <thead>
             <tr>
@@ -102,6 +153,7 @@ function Admin_page() {
               <th>Email</th>
               <th>Role</th>
               <th>Trips</th>
+              <th>Action</th>
             </tr>
           </thead>
           <tbody>
@@ -109,12 +161,61 @@ function Admin_page() {
               <tr key={user.id}>
                 <td>{user.full_name}</td>
                 <td>{user.email}</td>
-                <td>{user.role}</td>
+                <td>
+                  <span className={user.role === 'admin' ? 'badge badge_admin' : 'badge'}>
+                    {user.role}
+                  </span>
+                </td>
                 <td>{trips_of(user.id)}</td>
+                <td>
+                  {user.id === user_id ? (
+                    <span className="small_text">You</span>
+                  ) : user.role === 'admin' ? (
+                    <button className="table_btn" onClick={() => change_role(user, 'user')}>
+                      Make user
+                    </button>
+                  ) : (
+                    <button className="table_btn" onClick={() => change_role(user, 'admin')}>
+                      Make admin
+                    </button>
+                  )}
+                </td>
               </tr>
             ))}
           </tbody>
         </table>
+      </div>
+
+      <div className="card dash_section">
+        <h3>All trips</h3>
+        {trips.length === 0 ? (
+          <p>No trips saved yet.</p>
+        ) : (
+          <table>
+            <thead>
+              <tr>
+                <th>Place</th>
+                <th>Country</th>
+                <th>Saved by</th>
+                <th>Action</th>
+              </tr>
+            </thead>
+            <tbody>
+              {trips.map((trip) => (
+                <tr key={trip.id}>
+                  <td>{trip.place}</td>
+                  <td>{trip.country}</td>
+                  <td>{owner_name(trip.user_id)}</td>
+                  <td>
+                    <button className="table_btn danger" onClick={() => delete_trip(trip)}>
+                      Delete
+                    </button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        )}
       </div>
     </div>
   )

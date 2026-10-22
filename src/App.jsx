@@ -67,7 +67,7 @@ function App() {
         />
         <Route
           path="/admin"
-          element={role === 'admin' ? <Admin_page /> : <Navigate to="/" />}
+          element={role === 'admin' ? <Admin_page user_id={session.user.id} /> : <Navigate to="/" />}
         />
       </Routes>
     </>
