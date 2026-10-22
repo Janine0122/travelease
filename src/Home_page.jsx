@@ -4,12 +4,6 @@ import Save_trip_button from './Save_trip_button'
 
 const QUICK_PLACES = ['Tokyo', 'Paris', 'Bohol', 'Singapore', 'Seoul']
 
-// public Overpass servers (the second one is a backup)
-const OVERPASS_SERVERS = [
-  'https://overpass-api.de/api/interpreter',
-  'https://overpass.kumi.systems/api/interpreter',
-]
-
 // turns the weather code into words
 function weather_text(code) {
   if (code === 0) return 'Clear sky'
@@ -65,36 +59,30 @@ async function get_earthquakes(lat, lon) {
   return data.features
 }
 
-// gets places to visit within 10 km (OpenStreetMap Overpass API)
-async function get_attractions(lat, lon) {
-  const overpass_query = `[out:json][timeout:25];nwr["tourism"~"attraction|museum|viewpoint|zoo|theme_park"]["name"](around:10000,${lat},${lon});out center 60;`
-
-  // try each server until one answers
-  let data = null
-  for (const server of OVERPASS_SERVERS) {
-    data = await get_json(`${server}?data=${encodeURIComponent(overpass_query)}`, 20000)
-    if (data) break
-  }
+// gets tourist spots in the place (OpenStreetMap Nominatim search)
+async function get_attractions(place_name) {
+  const data = await get_json(
+    `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent('tourist attraction in ' + place_name)}&format=json&limit=15&accept-language=en`,
+    8000
+  )
 
   if (!data) return null
 
-  const list = data.elements.map((item) => ({
-    id: item.type + item.id,
-    name: item.tags.name,
-    type: item.tags.tourism,
-    lat: item.lat || item.center.lat,
-    lon: item.lon || item.center.lon,
-    famous: Boolean(item.tags.wikipedia || item.tags.wikidata),
-  }))
-
-  // famous places first
-  list.sort((a, b) => Number(b.famous) - Number(a.famous))
+  const list = data
+    .map((item) => ({
+      id: item.place_id,
+      name: item.name || item.display_name.split(',')[0],
+      type: item.type,
+      lat: item.lat,
+      lon: item.lon,
+    }))
+    .filter((item) => item.name)
 
   // remove repeated names
   const seen = {}
-  const unique = list.filter((place) => {
-    if (seen[place.name]) return false
-    seen[place.name] = true
+  const unique = list.filter((spot) => {
+    if (seen[spot.name]) return false
+    seen[spot.name] = true
     return true
   })
 
@@ -200,9 +188,9 @@ function Home_page({ profile }) {
     })
     setLoading(false)
 
-    // API 7: Overpass (places to visit), loads after the main results
+    // tourist spots load after the main results
     setPlacesLoading(true)
-    get_attractions(lat, lon).then((list) => {
+    get_attractions(place_name).then((list) => {
       if (this_search !== search_id.current) return
       setPlaces(list)
       setPlacesLoading(false)
@@ -298,12 +286,12 @@ function Home_page({ profile }) {
 
           <div className="card">
             <h3>Places to Visit</h3>
-            <p className="small_text">Popular spots within 10 km (well-known places first)</p>
+            <p className="small_text">Tourist spots found in this area</p>
             {places_loading && <p>Looking for places...</p>}
             {!places_loading && places === null && (
               <p>Places not available right now. Try searching again later.</p>
             )}
-            {places && places.length === 0 && <p>No attractions found nearby.</p>}
+            {places && places.length === 0 && <p>No attractions found.</p>}
             {places &&
               places.map((spot) => (
                 <div className="attraction" key={spot.id}>
