@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useRef } from 'react'
 import Place_map from './Place_map'
 import Save_trip_button from './Save_trip_button'
 
@@ -18,9 +18,9 @@ function weather_text(code) {
 }
 
 // gets data from an API, returns null if it fails or takes too long
-async function get_json(url) {
+async function get_json(url, wait = 6000) {
   try {
-    const response = await fetch(url, { signal: AbortSignal.timeout(6000) })
+    const response = await fetch(url, { signal: AbortSignal.timeout(wait) })
     if (!response.ok) return null
     return await response.json()
   } catch {
@@ -59,6 +59,40 @@ async function get_earthquakes(lat, lon) {
   return data.features
 }
 
+// gets places to visit within 15 km (OpenStreetMap Overpass API)
+async function get_attractions(lat, lon) {
+  const overpass_query = `[out:json][timeout:15];nwr["tourism"~"attraction|museum|viewpoint|zoo|theme_park"]["name"](around:15000,${lat},${lon});out center 80;`
+
+  const data = await get_json(
+    `https://overpass-api.de/api/interpreter?data=${encodeURIComponent(overpass_query)}`,
+    15000
+  )
+
+  if (!data) return null
+
+  const list = data.elements.map((item) => ({
+    id: item.type + item.id,
+    name: item.tags.name,
+    type: item.tags.tourism,
+    lat: item.lat || item.center.lat,
+    lon: item.lon || item.center.lon,
+    famous: Boolean(item.tags.wikipedia || item.tags.wikidata),
+  }))
+
+  // famous places first
+  list.sort((a, b) => Number(b.famous) - Number(a.famous))
+
+  // remove repeated names
+  const seen = {}
+  const unique = list.filter((place) => {
+    if (seen[place.name]) return false
+    seen[place.name] = true
+    return true
+  })
+
+  return unique.slice(0, 8)
+}
+
 const HOME_CURRENCY = 'PHP'
 
 function Home_page({ profile }) {
@@ -66,6 +100,9 @@ function Home_page({ profile }) {
   const [loading, setLoading] = useState(false)
   const [message, setMessage] = useState('')
   const [result, setResult] = useState(null)
+  const [places, setPlaces] = useState(null)
+  const [places_loading, setPlacesLoading] = useState(false)
+  const search_id = useRef(0)
 
   // when the search form is submitted
   function handle_search(e) {
@@ -80,22 +117,27 @@ function Home_page({ profile }) {
   }
 
   async function run_search(search_text) {
+    search_id.current = search_id.current + 1
+    const this_search = search_id.current
+
     setMessage('')
     setResult(null)
+    setPlaces(null)
+    setPlacesLoading(false)
     setLoading(true)
 
     // API 1: OpenStreetMap Nominatim (find the place)
-    const places = await get_json(
+    const found = await get_json(
       `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(search_text)}&format=json&limit=1&addressdetails=1`
     )
 
-    if (!places || places.length === 0) {
+    if (!found || found.length === 0) {
       setMessage('Place not found. Try another name.')
       setLoading(false)
       return
     }
 
-    const place = places[0]
+    const place = found[0]
     const lat = parseFloat(place.lat)
     const lon = parseFloat(place.lon)
     const country_code = place.address.country_code
@@ -133,6 +175,9 @@ function Home_page({ profile }) {
       }
     }
 
+    // stop if the user already searched something else
+    if (this_search !== search_id.current) return
+
     setResult({
       name: place_name,
       full_name: place.display_name,
@@ -146,6 +191,14 @@ function Home_page({ profile }) {
       rate: rate,
     })
     setLoading(false)
+
+    // API 7: Overpass (places to visit), loads after the main results
+    setPlacesLoading(true)
+    get_attractions(lat, lon).then((list) => {
+      if (this_search !== search_id.current) return
+      setPlaces(list)
+      setPlacesLoading(false)
+    })
   }
 
   return (
@@ -190,6 +243,7 @@ function Home_page({ profile }) {
             <span className="feature_tag">Country info</span>
             <span className="feature_tag">Exchange rate</span>
             <span className="feature_tag">Earthquake alerts</span>
+            <span className="feature_tag">Places to visit</span>
             <span className="feature_tag">Map</span>
           </div>
           <p>Then save the place to My Trips and add your dates and notes.</p>
@@ -232,6 +286,29 @@ function Home_page({ profile }) {
             ) : (
               <p>Weather not available.</p>
             )}
+          </div>
+
+          <div className="card">
+            <h3>Places to Visit</h3>
+            <p className="small_text">Popular spots within 15 km (well-known places first)</p>
+            {places_loading && <p>Looking for places...</p>}
+            {!places_loading && places === null && (
+              <p>Places not available right now. Try searching again later.</p>
+            )}
+            {places && places.length === 0 && <p>No attractions found nearby.</p>}
+            {places &&
+              places.map((spot) => (
+                <div className="attraction" key={spot.id}>
+                  <a
+                    href={`https://www.openstreetmap.org/?mlat=${spot.lat}&mlon=${spot.lon}#map=17/${spot.lat}/${spot.lon}`}
+                    target="_blank"
+                    rel="noreferrer"
+                  >
+                    {spot.name}
+                  </a>
+                  <span className="badge">{spot.type.replace('_', ' ')}</span>
+                </div>
+              ))}
           </div>
 
           <div className="card">

@@ -464,3 +464,24 @@ tbody tr:hover {
 .table_btn.danger {
   background: #d93030;
 }
+
+/* ---------- places to visit ---------- */
+.attraction {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 0;
+  border-bottom: 1px solid #edf0f7;
+  font-size: 14px;
+}
+
+.attraction a {
+  color: #1e6fd9;
+  text-decoration: none;
+  font-weight: 500;
+}
+
+.attraction a:hover {
+  text-decoration: underline;
+}
