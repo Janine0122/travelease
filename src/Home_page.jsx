@@ -26,6 +26,23 @@ async function get_json(url) {
   }
 }
 
+// gets the description and photo from Wikipedia
+async function get_wiki(title) {
+  const data = await get_json(
+    `https://en.wikipedia.org/w/api.php?action=query&prop=extracts|pageimages&exintro=1&explaintext=1&exsentences=4&piprop=thumbnail&pithumbsize=500&redirects=1&titles=${encodeURIComponent(title)}&format=json&origin=*`
+  )
+
+  if (!data || !data.query) return null
+
+  const page = Object.values(data.query.pages)[0]
+  if (page.missing !== undefined || !page.extract) return null
+
+  return {
+    extract: page.extract,
+    image: page.thumbnail ? page.thumbnail.source : null,
+  }
+}
+
 const HOME_CURRENCY = 'PHP'
 
 function Home_page({ profile }) {
@@ -58,26 +75,22 @@ function Home_page({ profile }) {
     const place_name = place.name || query
 
     // API 2: Open-Meteo (weather)
-    // API 3: REST Countries (country info)
+    // API 3: countries.dev (country info)
     // API 4: Wikipedia (description and photo)
     const [weather, country, wiki] = await Promise.all([
       get_json(
         `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m,weather_code,wind_speed_10m&daily=weather_code,temperature_2m_max,temperature_2m_min&timezone=auto&forecast_days=5`
       ),
-      get_json(
-        `https://restcountries.com/v3.1/alpha/${country_code}?fields=name,capital,region,languages,currencies,flags,population`
-      ),
-      get_json(
-        `https://en.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(place_name)}`
-      ),
+      get_json(`https://countries.dev/alpha/${country_code}`),
+      get_wiki(place_name),
     ])
 
     // API 5: Frankfurter (exchange rate from PHP to the local currency)
     let currency_code = null
     let rate = null
 
-    if (country && country.currencies) {
-      currency_code = Object.keys(country.currencies)[0]
+    if (country && country.currencies && country.currencies.length > 0) {
+      currency_code = country.currencies[0].code
 
       if (currency_code === HOME_CURRENCY) {
         rate = 1
@@ -129,13 +142,13 @@ function Home_page({ profile }) {
           <div className="card">
             <h3>{result.name}</h3>
             <p className="small_text">{result.full_name}</p>
-            {result.wiki && result.wiki.thumbnail && (
-              <img className="place_photo" src={result.wiki.thumbnail.source} alt={result.name} />
+            {result.wiki && result.wiki.image && (
+              <img className="place_photo" src={result.wiki.image} alt={result.name} />
             )}
             <p>{result.wiki ? result.wiki.extract : 'No description found.'}</p>
             <Save_trip_button
-                place={result.name}
-                country={result.country ? result.country.name.common : ''}
+              place={result.name}
+              country={result.country ? result.country.name : ''}
             />
           </div>
 
@@ -167,14 +180,14 @@ function Home_page({ profile }) {
             {result.country ? (
               <>
                 <img className="flag" src={result.country.flags.png} alt="flag" />
-                <p>Name: {result.country.name.common}</p>
-                <p>Capital: {result.country.capital ? result.country.capital[0] : 'N/A'}</p>
+                <p>Name: {result.country.name}</p>
+                <p>Capital: {result.country.capital || 'N/A'}</p>
                 <p>Region: {result.country.region}</p>
                 <p>Population: {result.country.population.toLocaleString()}</p>
                 <p>
                   Languages:{' '}
-                  {result.country.languages
-                    ? Object.values(result.country.languages).join(', ')
+                  {result.country.languages && result.country.languages.length > 0
+                    ? result.country.languages.map((lang) => lang.name).join(', ')
                     : 'N/A'}
                 </p>
               </>
